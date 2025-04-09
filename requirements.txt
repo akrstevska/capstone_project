@@ -1,0 +1,10 @@
+flask
+requests
+langchain
+faiss-cpu
+sentence-transformers
+ollama
+numpy
+langchain-ollama
+langchain-community
+langchain-huggingface
