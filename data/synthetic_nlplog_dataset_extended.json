@@ -1,0 +1,152 @@
+[
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_AZ-OLT_KV02 and provide necessary actions.",
+    "log": "TK_AZ-OLT_KV02 auditd[0]: ONU Link Event PON 0/7 ONU 1 54:93:59:08:21:83 Errored Symbol Period.",
+    "output": "This indicates repeated transmission errors on the ONU link. Check for fiber degradation, loose connectors, or optical power issues.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_AZ_OLT-VE20-Garaza and provide necessary actions.",
+    "log": "TK_AZ_OLT-VE20-Garaza auditd[0]: OLT FAN Open!.",
+    "output": "This suggests the OLT chassis fan cover is open or a fault is detected. Immediate physical inspection is advised to prevent overheating.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_AZ-OLT_BT_CaneVasilev-01 and provide necessary actions.",
+    "log": "TK_AZ-OLT_BT_CaneVasilev-01 auditd[0]: ONU Link LOST PON 0/5 ONU 3 0C:B9:12:02:E3:E0..",
+    "output": "The ONU has lost its link, possibly due to power loss or fiber cut. Verify the power and physical fiber connection.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-OH02 and provide necessary actions.",
+    "log": "TK_GPoN-OH02 auditd[0]: DHCP Snooping Illegal Server PON 0/12 Find Illegal dhcp server(offer), src-mac E0:E8:E6:D1:88:A1.",
+    "output": "A rogue DHCP server was detected. This can lead to IP conflicts and misrouting. Locate and disable the unauthorized device.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_AZ_OLT-VE05-Garaza and provide necessary actions.",
+    "log": "TK_AZ_OLT-VE05-Garaza auditd[0]: OLT FAN Close!.",
+    "output": "The fan status returned to normal. If there was a prior open event, log the resolution and monitor temperatures.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_ScriptServer_01 and provide necessary actions.",
+    "log": "TK_ScriptServer_01 auditd[0]: script,error executing script from dhcp failed, please check it manually",
+    "output": "This log reports a level 4 event from TK_ScriptServer_01: 'script,error executing script from dhcp failed, please check it manually'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_ScriptServer_01 and provide necessary actions.",
+    "log": "TK_ScriptServer_01 auditd[0]: script,error executing script from dhcp failed, please check it manually",
+    "output": "This log reports a level 4 event from TK_ScriptServer_01: 'script,error executing script from dhcp failed, please check it manually'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_OLT_FAN_MONITOR and provide necessary actions.",
+    "log": "TK_OLT_FAN_MONITOR auditd[0]: OLT FAN Open!.",
+    "output": "This log reports a level 4 event from TK_OLT_FAN_MONITOR: 'OLT FAN Open!.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-SK01 and provide necessary actions.",
+    "log": "TK_GPoN-SK01 auditd[0]: ONU Deregister PON 0/3 ONU 5 llid 10 3a:4c:f7:fd:32:05 MPCP ONU initiates DEREG.",
+    "output": "This log reports a level 2 event from TK_GPoN-SK01: 'ONU Deregister PON 0/3 ONU 5 llid 10 3a:4c:f7:fd:32:05 MPCP ONU initiates DEREG.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_ScriptServer_01 and provide necessary actions.",
+    "log": "TK_ScriptServer_01 auditd[0]: script,error executing script from dhcp failed, please check it manually",
+    "output": "This log reports a level 4 event from TK_ScriptServer_01: 'script,error executing script from dhcp failed, please check it manually'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-SK01 and provide necessary actions.",
+    "log": "TK_GPoN-SK01 auditd[0]: ONU Deregister PON 0/3 ONU 5 llid 10 2c:2d:31:e7:5b:9a MPCP ONU initiates DEREG.",
+    "output": "This log reports a level 2 event from TK_GPoN-SK01: 'ONU Deregister PON 0/3 ONU 5 llid 10 2c:2d:31:e7:5b:9a MPCP ONU initiates DEREG.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-SK01 and provide necessary actions.",
+    "log": "TK_GPoN-SK01 auditd[0]: ONU Deregister PON 0/3 ONU 5 llid 10 ff:96:9a:2a:58:ee MPCP ONU initiates DEREG.",
+    "output": "This log reports a level 2 event from TK_GPoN-SK01: 'ONU Deregister PON 0/3 ONU 5 llid 10 ff:96:9a:2a:58:ee MPCP ONU initiates DEREG.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_OLT_FAN_MONITOR and provide necessary actions.",
+    "log": "TK_OLT_FAN_MONITOR auditd[0]: OLT FAN Open!.",
+    "output": "This log reports a level 4 event from TK_OLT_FAN_MONITOR: 'OLT FAN Open!.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_OLT_FAN_MONITOR and provide necessary actions.",
+    "log": "TK_OLT_FAN_MONITOR auditd[0]: OLT FAN Open!.",
+    "output": "This log reports a level 4 event from TK_OLT_FAN_MONITOR: 'OLT FAN Open!.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_OLT_FAN_MONITOR and provide necessary actions.",
+    "log": "TK_OLT_FAN_MONITOR auditd[0]: OLT FAN Open!.",
+    "output": "This log reports a level 4 event from TK_OLT_FAN_MONITOR: 'OLT FAN Open!.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-SK01 and provide necessary actions.",
+    "log": "TK_GPoN-SK01 auditd[0]: ONU Deregister PON 0/3 ONU 5 llid 10 26:29:20:1d:fc:6a MPCP ONU initiates DEREG.",
+    "output": "This log reports a level 2 event from TK_GPoN-SK01: 'ONU Deregister PON 0/3 ONU 5 llid 10 26:29:20:1d:fc:6a MPCP ONU initiates DEREG.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_OLT_FAN_MONITOR and provide necessary actions.",
+    "log": "TK_OLT_FAN_MONITOR auditd[0]: OLT FAN Open!.",
+    "output": "This log reports a level 4 event from TK_OLT_FAN_MONITOR: 'OLT FAN Open!.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_ScriptServer_01 and provide necessary actions.",
+    "log": "TK_ScriptServer_01 auditd[0]: script,error executing script from dhcp failed, please check it manually",
+    "output": "This log reports a level 4 event from TK_ScriptServer_01: 'script,error executing script from dhcp failed, please check it manually'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_ScriptServer_01 and provide necessary actions.",
+    "log": "TK_ScriptServer_01 auditd[0]: script,error executing script from dhcp failed, please check it manually",
+    "output": "This log reports a level 4 event from TK_ScriptServer_01: 'script,error executing script from dhcp failed, please check it manually'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-OLT_AZ01 and provide necessary actions.",
+    "log": "TK_GPoN-OLT_AZ01 auditd[0]: ONU Link Event PON 0/5 ONU 12 03:3f:7c:fc:36:45 Errored Symbol Period.",
+    "output": "This log reports a level 3 event from TK_GPoN-OLT_AZ01: 'ONU Link Event PON 0/5 ONU 12 03:3f:7c:fc:36:45 Errored Symbol Period.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-OLT_AZ01 and provide necessary actions.",
+    "log": "TK_GPoN-OLT_AZ01 auditd[0]: ONU Link Event PON 0/5 ONU 12 b1:a9:45:ca:cf:28 Errored Symbol Period.",
+    "output": "This log reports a level 3 event from TK_GPoN-OLT_AZ01: 'ONU Link Event PON 0/5 ONU 12 b1:a9:45:ca:cf:28 Errored Symbol Period.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_ScriptServer_01 and provide necessary actions.",
+    "log": "TK_ScriptServer_01 auditd[0]: script,error executing script from dhcp failed, please check it manually",
+    "output": "This log reports a level 4 event from TK_ScriptServer_01: 'script,error executing script from dhcp failed, please check it manually'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_OLT_FAN_MONITOR and provide necessary actions.",
+    "log": "TK_OLT_FAN_MONITOR auditd[0]: OLT FAN Open!.",
+    "output": "This log reports a level 4 event from TK_OLT_FAN_MONITOR: 'OLT FAN Open!.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-OLT_AZ01 and provide necessary actions.",
+    "log": "TK_GPoN-OLT_AZ01 auditd[0]: ONU Link Event PON 0/5 ONU 12 6b:7f:41:24:45:c3 Errored Symbol Period.",
+    "output": "This log reports a level 3 event from TK_GPoN-OLT_AZ01: 'ONU Link Event PON 0/5 ONU 12 6b:7f:41:24:45:c3 Errored Symbol Period.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  },
+  {
+    "instruction": "As a network operations engineer, analyze the following log message from TK_GPoN-OH02 and provide necessary actions.",
+    "log": "TK_GPoN-OH02 auditd[0]: DHCP Snooping Illegal Server PON 0/4 Find Illegal dhcp server(offer), src-mac fb:fb:e4:19:55:4e.",
+    "output": "This log reports a level 3 event from TK_GPoN-OH02: 'DHCP Snooping Illegal Server PON 0/4 Find Illegal dhcp server(offer), src-mac fb:fb:e4:19:55:4e.'. Investigate the hardware or network components involved.",
+    "domain": "Optical Networking"
+  }
+]
