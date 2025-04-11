@@ -3,9 +3,9 @@ import base64
 from datetime import datetime, timedelta
 
 # CONFIGURE YOUR GRAYLOG CREDENTIALS HERE:
-GRAYLOG_URL = "http://10.181.4.5:9000/api"
-USERNAME = "131hu5c77g2mr51khieu13t2j7sve9f6bdn5qnbijflgel6mpsl"
-PASSWORD = "token"
+GRAYLOG_URL = ""
+USERNAME = ""
+PASSWORD = ""
 
 # Prepare headers with basic auth
 auth_str = f"{USERNAME}:{PASSWORD}"
