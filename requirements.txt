@@ -8,3 +8,4 @@ numpy
 langchain-ollama
 langchain-community
 langchain-huggingface
+flask-cors
