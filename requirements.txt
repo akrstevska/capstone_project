@@ -4,8 +4,9 @@ langchain
 faiss-cpu
 sentence-transformers
 ollama
-numpy
+numpy<2
 langchain-ollama
 langchain-community
 langchain-huggingface
 flask-cors
+pandas
