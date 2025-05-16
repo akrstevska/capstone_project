@@ -26,7 +26,7 @@ DEFAULT_CSV_FILE_PATH = "logs-24h.csv"
 
 
 DEFAULT_TIMEZONE = pytz.timezone('Europe/Belgrade')
-REFERENCE_TIME = pytz.timezone('Europe/Belgrade').localize(datetime(2025, 5, 16, 10, 15, 0))
+REFERENCE_TIME = pytz.timezone('Europe/Belgrade').localize(datetime(2025, 5, 16, 12, 55, 0))
 
 def set_reference_time(time_str=None):
     return REFERENCE_TIME
