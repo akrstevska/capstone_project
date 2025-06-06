@@ -34,26 +34,83 @@ embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-Mi
 nlplog_store = load_nlplog_vectorstore(embedding_model)
 vector_store = None
 
+# def normalize_message(message):
+#     """
+#     Normalize log message by replacing variable parts.
+#     """
+#     # MAC addresses
+#     normalized = re.sub(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", "XX:XX:XX:XX:XX:XX", message)
+    
+#     # PON identifiers
+#     normalized = re.sub(r'\bPON \d+/\d+\b', 'PON X/X', normalized)
+    
+#     # ONU identifiers
+#     normalized = re.sub(r'\bONU \d+\b', 'ONU X', normalized)
+    
+#     # IP addresses
+#     normalized = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', 'X.X.X.X', normalized)
+    
+#     # timestamps
+#     normalized = re.sub(r'\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?\b', 'YYYY-MM-DD HH:MM:SS', normalized)
+    
+#     return normalized
+
 def normalize_message(message):
     """
-    Normalize log message by replacing variable parts.
+    Normalize log message by masking only highly variable parts like MACs and IPs,
+    but keeping structural and semantic components intact.
     """
     # MAC addresses
-    normalized = re.sub(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", "XX:XX:XX:XX:XX:XX", message)
-    
-    # PON identifiers
-    normalized = re.sub(r'\bPON \d+/\d+\b', 'PON X/X', normalized)
-    
-    # ONU identifiers
-    normalized = re.sub(r'\bONU \d+\b', 'ONU X', normalized)
+    message = re.sub(r"(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}", "<MAC>", message)
     
     # IP addresses
-    normalized = re.sub(r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b', 'X.X.X.X', normalized)
+    message = re.sub(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", "<IP>", message)
     
-    # timestamps
-    normalized = re.sub(r'\b\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?\b', 'YYYY-MM-DD HH:MM:SS', normalized)
+    # LLID (logical link ID) if exists
+    message = re.sub(r"\bllid \d+\b", "llid <ID>", message)
     
-    return normalized
+    # Optional: remove specific ONU serials (but not ONU ID numbers like 'ONU 1')
+    message = re.sub(r"\b[A-Z0-9]{4}\.[A-Z0-9]{4}\b", "<SERIAL>", message)
+    
+    return message.strip()
+
+
+
+def select_diverse_logs(logs, max_per_type=5, max_total=40):
+    """
+    Selects diverse logs, prioritizing newer entries first.
+    Groups logs by normalized message and limits how many per type.
+    """
+    def parse_time(log):
+        try:
+            return datetime.fromisoformat(log.get("timestamp").replace("Z", "+00:00"))
+        except:
+            return datetime.min 
+
+    logs = sorted(logs, key=parse_time, reverse=True)
+
+    grouped = defaultdict(list)
+    for log in logs:
+        norm_msg = normalize_message(log["message"])
+        grouped[norm_msg].append(log)
+
+    selected = []
+    for group in grouped.values():
+        selected.extend(group[:max_per_type])
+        if len(selected) >= max_total:
+            break
+
+    return selected[:max_total]
+
+def should_filter_logs(user_q: str) -> bool:
+    specific_keywords = ['onu', 'olt', 'mac', 'pon', 'specific', 'device', 'log in', 'log out']
+    broad_keywords = ['issue', 'error', 'problem', 'trend', 'happened', 'pattern', 'failures']
+
+    if any(word in user_q.lower() for word in specific_keywords):
+        return True
+    elif any(word in user_q.lower() for word in broad_keywords):
+        return False
+    return False 
 
 def cluster_logs_by_source(logs):
     """
@@ -118,12 +175,15 @@ def ask():
     try:
         user_q = request.json.get("question")
         style = request.json.get("style", "summary")
-        
+        skip_llm = request.json.get("skip_llm", False)
+
         reference_time = request.json.get("reference_time")
         if reference_time:
             set_reference_time(reference_time)
         
         filters = lp.extract_query_filters(user_q)
+        if "target_ip" in filters:
+            filters["source"] = filters.pop("target_ip")
         time_filters = {k: v for k, v in filters.items() 
                        if k in ['minutes_ago', 'hours_ago', 'today', 'yesterday']}
         logger.info(f"Extracted time filters: {time_filters}")
@@ -131,20 +191,37 @@ def ask():
         logs = get_recent_logs(
             max_logs=20000,
             minutes=time_filters.get('minutes_ago'),
-            hours=time_filters.get('hours_ago')
+            hours=time_filters.get('hours_ago'),
+            source_ip=filters.get("source")
             
         )
         
         if not logs:
             return jsonify({"answer": "No logs found for the specified time period."})
-
+        if filters:
+            filtered_logs = []
+            for log in logs:
+                enriched = lp.enrich_log_metadata(log)
+                match = True
+                for key in ["onu_id", "pon", "device_id"]:
+                    if key in filters and str(enriched.get(key)) != str(filters[key]):
+                        match = False
+                        break
+                if match:
+                    filtered_logs.append(enriched)
+            logs = filtered_logs
+            
         k_logs = 20  
         if style == "detailed":
-            k_logs = 40
+            k_logs = 60
         elif style == "critical":
-            k_logs = 50
+            k_logs = 80
         elif style == "report":
-            k_logs = 50
+            k_logs = 100
+        logger.info(f"Filtered logs count before diversity selection: {len(logs)}")
+   
+        if should_filter_logs(user_q):
+            logs = select_diverse_logs(logs, max_per_type=3, max_total=k_logs)
 
         if style == "summary":
             system_prompt = short_summary_prompt(user_q)
@@ -173,18 +250,20 @@ def ask():
             retriever = vector_store.as_retriever(search_kwargs={"k": k_logs})
         
         qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-
-        try:
-            response = qa.invoke(system_prompt)
-            if isinstance(response, dict) and "result" in response:
-                answer = response["result"]
-            else:
-                answer = qa.run(system_prompt)
+        
+        answer = None
+        if not skip_llm:
+            try:
+                response = qa.invoke(system_prompt)
+                if isinstance(response, dict) and "result" in response:
+                    answer = response["result"]
+                else:
+                    answer = qa.run(system_prompt)
+                    logger.info("Used legacy run() method as fallback")
+            except Exception as e:
+                logger.warning(f"Error with invoke method: {e}")
+                answer = qa.run(system_prompt) 
                 logger.info("Used legacy run() method as fallback")
-        except Exception as e:
-            logger.warning(f"Error with invoke method: {e}")
-            answer = qa.run(system_prompt) 
-            logger.info("Used legacy run() method as fallback")
 
         relevant_logs = []
         try:
@@ -241,7 +320,7 @@ def ask():
 
         # result
         return jsonify({
-            "answer": answer,
+            "answer": answer if answer else "LLM skipped",
             "supporting_logs": relevant_logs,
             "metadata": {
                 "retrieved_count": len(relevant_logs),

@@ -23,7 +23,8 @@ def extract_device_info(message):
         "device_id": None,
         "pon": None,
         "onu_id": None,
-        "mac": None
+        "mac": None,
+        "ip": None
     }
     
     # OLT device info
@@ -33,7 +34,7 @@ def extract_device_info(message):
         device_info["device_id"] = olt_match.group(1)
     
     # ONU device info
-    onu_match = re.search(r'ONU[_\s](\d+)', message)
+    onu_match = re.search(r'\bONU[_\s](\d+)\b', message)
     if onu_match:
         device_info["device_type"] = "ONU"
         device_info["onu_id"] = onu_match.group(1)
@@ -47,6 +48,10 @@ def extract_device_info(message):
     mac_match = re.search(r'([0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2}:[0-9A-Fa-f]{2})', message)
     if mac_match:
         device_info["mac"] = mac_match.group(1)
+        
+    ip_match = re.search(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b', message)
+    if ip_match:
+        device_info["ip"] = ip_match.group(1)
     
     return device_info
 
@@ -69,7 +74,8 @@ def enrich_log_metadata(log):
         "device_id": device_info["device_id"],
         "pon": device_info["pon"],
         "onu_id": device_info["onu_id"],
-        "mac": device_info["mac"]
+        "mac": device_info["mac"],
+        "ip": device_info["ip"]
     })
     
     return enriched
@@ -109,7 +115,8 @@ def logs_to_chunked_documents(logs, chunk_size=5, chunk_overlap=1):
                     "device_id": enriched_log.get("device_id"),
                     "pon": enriched_log.get("pon"),
                     "onu_id": enriched_log.get("onu_id"),
-                    "mac": enriched_log.get("mac")
+                    "mac": enriched_log.get("mac"),
+                    "ip": enriched_log.get("ip")
                 }
             )
             documents.append(doc)
@@ -171,10 +178,10 @@ def extract_query_filters(query):
     if mac_match:
         filters["mac"] = mac_match.group(1)
     
-    # IP filter
+    # IP filter - FIXED VERSION
     ip_match = re.search(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b', query)
     if ip_match:
-        filters["source"] = ip_match.group(1)
+        filters["target_ip"] = ip_match.group(1)  # Use unique key to avoid conflicts
     
     # Level filter (critical, warning...)
     if re.search(r'\bcritical\b|\berror\b|\bfatal\b', query, re.IGNORECASE):
@@ -275,16 +282,27 @@ def create_filter_function(filters):
                 doc_level = metadata.get("level", 6)
                 if doc_level > value:
                     return False
+            elif key == "target_ip":
+                doc_source = metadata.get("source", "")
+                doc_ip = metadata.get("ip", "")
+                
+                ip_found = (str(doc_source).strip() == str(value).strip() or 
+                           str(doc_ip).strip() == str(value).strip())
+                
+                if not ip_found:
+                    return False
             elif key in metadata:
                 doc_value = metadata[key]
                 if doc_value is None:
                     return False
-                if isinstance(doc_value, str) and isinstance(value, str):
-                    if value.lower() not in doc_value.lower():
+                if key in ["onu_id", "device_id", "pon", "source"]:
+                    if str(doc_value).strip() != str(value).strip():
+                        return False
+                elif isinstance(doc_value, str) and isinstance(value, str):
+                    if value.lower() not in str(doc_value).lower():
                         return False
                 elif doc_value != value:
                     return False
-
         return True
 
     return filter_function

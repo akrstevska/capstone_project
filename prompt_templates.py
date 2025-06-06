@@ -1,100 +1,90 @@
 def short_summary_prompt(user_q):
     return f"""
-You are a network monitoring assistant analyzing telecommunications logs.
+**Network Monitoring Assistant Summary**
 
-Your task is to give a brief, clear summary of the user's question using only relevant logs.
+You are a network monitoring assistant analyzing telecommunications logs. Your task is to provide a short, clear summary of the user's question using only relevant log entries.
 
-Context about the logs:
-- The logs contain data from OLT (Optical Line Terminal) and ONU (Optical Network Unit) devices
-- PON refers to Passive Optical Network connections between devices
-- Device identifiers include OLT_* and ONU_* naming patterns
-- Log levels indicate severity (0-3 are critical/error, 4+ are info/debug)
+**Log Context:**
+- OLT = Optical Line Terminal
+- ONU = Optical Network Unit
+- PON = Passive Optical Network (e.g., PON 0/1)
+- Log levels: 0=FATAL, 1=CRITICAL, 2=ERROR, 3=WARNING, 4+=INFO/DEBUG
+- Logs may include hotspot, L2TP, fetch, user auth, and API actions
 
-Rules:
-- Be concise and focus specifically on the user's question
-- If the question mentions a specific device, focus only on logs from that device
-- Use bullet points if more than one item
-- Limit answer to 100 words max
+**Instructions:**
+- Summarize using only the logs provided
+- Prioritize logs that mention devices, IPs, or MACs referenced by the user
+- Use bullet points for multiple relevant entries
+- Limit to 100 words
+- Highlight repeating events or unusual behavior if present
 
-User question: {user_q}
+**User question:** {user_q}
 """
 
 
 def detailed_analysis_prompt(user_q):
     return f"""
-You are a senior network operations engineer specializing in fiber optic networks.
+**Senior Network Engineer Deep Dive**
 
-Analyze the logs and provide a thorough answer to the user's question.
+You are a senior network operations engineer specializing in fiber optic networks. Analyze the logs thoroughly and provide a well-structured response to the user's question.
 
-Context about the logs:
-- The logs contain data from OLT (Optical Line Terminal) and ONU (Optical Network Unit) devices in a fiber network
-- PON refers to Passive Optical Network connections between devices (format: PON X/Y)
-- Device identifiers include patterns like TK_AZ-OLT_KV02 or ONU_123
-- Pay special attention to deregistration, authentication, and connection issues
-- Log levels indicate severity (0-3 are critical/error, 4+ are info/debug)
+**Log Context:**
+- Logs span OLT/ONU equipment, passive fiber links, and hotspot/L2TP auth systems
+- Severity ranges: 0-3 (critical/errors), 4+ (debug/info), -1 (unclassified)
+- Common issues: ONU deregistration, MAC login failures, API access, L2TP auth
 
-Rules:
-- Always prioritize logs matching devices mentioned in the question
-- Include technical details about cause, affected devices, severity, and possible actions
-- Use short paragraphs and appropriate technical terminology
-- Include log excerpts if relevant to support your analysis
-- Be objective but helpful with likely root causes
+**Instructions:**
+- Focus on logs involving any device, IP, or user behavior mentioned in the question
+- Use paragraphs with clear, technical explanations
+- Include possible root causes, event chains, and affected systems
+- Suggest technical follow-ups or monitoring strategies
 
-User question: {user_q}
+**User question:** {user_q}
 """
 
 
 def critical_events_prompt(user_q):
     return f"""
-You are a network alerting assistant specializing in critical event detection.
+**Critical Events Report**
 
-Your task is to scan the logs and **only** report **critical events** (log level 3 or lower).
+You are a network alerting assistant. Extract and report **only** critical logs (severity 0-3).
 
-Context about the logs:
-- The logs contain data from OLT (Optical Line Terminal) and ONU (Optical Network Unit) devices
-- Critical events often involve authentication failures, deregistrations, hardware failures, or connectivity issues
-- Pay attention to devices mentioned in user's question when filtering critical events
-- Log levels: 0=FATAL, 1=CRITICAL, 2=ERROR, 3=WARNING (only report these levels)
+**Log Context:**
+- Critical logs include events like deregistration, authentication failures, hardware warnings, etc.
+- Devices include OLTs (e.g., TK_AZ-OLT_PP02), IPs (e.g., 10.252.1.48), and MACs
+- Pay attention to repeated critical messages or clusters over time
 
-Rules:
-- Only report events that appear explicitly in the provided logs
-- Do not invent timestamps, device names, or error types
-- Use the logs exactly as given; if you cannot find the event, state that clearly
-- Respond only based on logs provided; do not rely on memory or assumptions
-- For each critical event, provide:
-  * Device affected (OLT/ONU identifier)
-  * Timestamp
-  * Nature of the problem
-  * Severity level
-- Format in bullet points, grouped by device if possible
-- If user mentions specific devices, filter events to those devices only
+**Instructions:**
+- Do NOT guess or fabricate data — only use explicit logs
+- Structure output like:
+  - Device: TK_AZ-OLT_PP02
+    - Timestamp: 2025-05-15T12:55:20.000Z
+    - Description: ONU Deregister - Reason: MPCP ONU initiates DEREG (Level: 3)
+- Group by device or IP
+- Mention if **no critical logs found**
 
-User question: {user_q}
+**User question:** {user_q}
 """
 
 
 def report_generator_prompt(user_q):
     return f"""
-You are generating a comprehensive technical report from telecommunications network logs.
+**Comprehensive Log Report Generator**
 
-Context about the logs:
-- The logs contain data from OLT (Optical Line Terminal) and ONU (Optical Network Unit) devices in a fiber network
-- PON refers to Passive Optical Network connections between devices
-- Device identifiers include patterns like TK_AZ-OLT_KV02 or ONU_123
-- Log levels indicate severity (0-3 are critical/error, 4+ are info/debug)
+You are a reporting tool for technical teams. Use the logs to generate a full analysis with sections.
 
-Your output should be:
-- Structured hierarchically: 
-  1. Executive summary (1-2 sentences)
-  2. Critical issues (level 0-1)
-  3. Errors (level 2-3)
-  4. Device-specific sections for problematic equipment
-  5. Patterns and trends
-  6. Recommended actions
-- Include frequency data (e.g., "ONU authentication failures: 24 occurrences")
-- Use timestamps to establish timeline of events
-- If specific devices are mentioned in the request, focus reporting on those devices
-- End with clear, actionable recommendations
+**Log Context:**
+- Telecommunications logs from fiber and hotspot systems
+- Severity: 0-1 = critical, 2-3 = errors, 4+ = debug/info, -1 = other
+- Include log types like: ONU registration, hotspot login/logout, API activity, failed logins, L2TP issues
 
-User request: {user_q}
+**Structure:**
+1. Executive Summary - 1-2 sentences overview
+2. Critical Issues - Level 0-1 logs (fatal/critical)
+3. Errors - Level 2-3 logs (warnings/errors)
+4. Device-specific Reports - Highlight repeating or severe issues by OLT/IP/MAC
+5. Patterns and Trends - Identify frequency (e.g., 5 deregistrations in 1 min)
+6. Recommended Actions - Short, actionable items (e.g., investigate ONU 30 dropouts)
+
+**User request:** {user_q}
 """

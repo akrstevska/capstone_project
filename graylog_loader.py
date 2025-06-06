@@ -70,7 +70,7 @@ def parse_timestamp(timestamp_str):
     return dt
 
 # read from CSV file 
-def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago=None, start_time=None, end_time=None):
+def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago=None, start_time=None, end_time=None, source_ip=None):
     """
     Read logs from a CSV file with time filtering.
     
@@ -112,7 +112,8 @@ def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago
                     log_time = parse_timestamp(row["timestamp"])
                     if log_time is None:
                         continue
-                    
+                    if source_ip and row.get("source") != source_ip:
+                        continue
                     if start_time and log_time < start_time:
                         continue
                     if end_time and log_time > end_time:
@@ -196,7 +197,7 @@ def get_logs_from_graylog(minutes=60, max_logs=10000):
 
 # Main function that can use either csv or graylg api
 def get_recent_logs(minutes=None, hours=None, max_logs=5000, use_csv=True, csv_path=None, 
-                    start_time=None, end_time=None):
+                    start_time=None, end_time=None, source_ip=None):
     """
     Get recent logs from either CSV file or Graylog API with flexible time filtering.
     
@@ -219,7 +220,8 @@ def get_recent_logs(minutes=None, hours=None, max_logs=5000, use_csv=True, csv_p
             minutes_ago=minutes, 
             hours_ago=hours,
             start_time=start_time,
-            end_time=end_time
+            end_time=end_time,
+            source_ip=source_ip
         )
     else:
         if hours is not None:
