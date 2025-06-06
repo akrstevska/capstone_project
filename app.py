@@ -103,14 +103,11 @@ def select_diverse_logs(logs, max_per_type=5, max_total=40):
     return selected[:max_total]
 
 def should_filter_logs(user_q: str) -> bool:
-    specific_keywords = ['onu', 'olt', 'mac', 'pon', 'specific', 'device', 'log in', 'log out']
-    broad_keywords = ['issue', 'error', 'problem', 'trend', 'happened', 'pattern', 'failures']
+    broad_keywords = ['ip', 'issue', 'issues', 'error', 'problem', 'trend', 'happened', 'pattern', 'failures', 'report', 'deregistration']
 
-    if any(word in user_q.lower() for word in specific_keywords):
-        return True
-    elif any(word in user_q.lower() for word in broad_keywords):
+    if any(word in user_q.lower() for word in broad_keywords):
         return False
-    return False 
+    return True 
 
 def cluster_logs_by_source(logs):
     """
