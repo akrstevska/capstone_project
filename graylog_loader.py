@@ -22,7 +22,7 @@ headers = {
     "Authorization": "Basic " + base64.b64encode(auth_str.encode()).decode(),
     "Accept": "application/json",
 }
-DEFAULT_CSV_FILE_PATH = "logs-24h.csv" 
+DEFAULT_CSV_FILE_PATH = "logs-24h-sorted.csv" 
 
 
 DEFAULT_TIMEZONE = pytz.timezone('Europe/Belgrade')
@@ -45,16 +45,20 @@ def parse_timestamp(timestamp_str):
         datetime: Parsed datetime object with timezone
     """
     formats = [
-        "%Y-%m-%dT%H:%M:%S.%fZ",  
-        "%Y-%m-%dT%H:%M:%SZ",     
-        "%Y-%m-%d %H:%M:%S",      
-        "%Y-%m-%d %H:%M:%S.%f"     
+        "%Y-%m-%dT%H:%M:%S.%fZ",  # UTC with microseconds
+        "%Y-%m-%dT%H:%M:%SZ",     # UTC without microseconds
+        "%Y-%m-%d %H:%M:%S",      # Local format
+        "%Y-%m-%d %H:%M:%S.%f"    # Local with microseconds
     ]
     
     dt = None
+    is_utc = False
+    
     for fmt in formats:
         try:
             dt = datetime.strptime(timestamp_str, fmt)
+            if fmt.endswith("Z"):
+                is_utc = True
             break
         except ValueError:
             continue
@@ -63,9 +67,11 @@ def parse_timestamp(timestamp_str):
         logger.warning(f"Could not parse timestamp: {timestamp_str}")
         return None
     
-    # timezone if missing
     if dt.tzinfo is None:
-        dt = DEFAULT_TIMEZONE.localize(dt)
+        if is_utc:
+            dt = pytz.UTC.localize(dt)
+        else:
+            dt = DEFAULT_TIMEZONE.localize(dt)
     
     return dt
 
@@ -145,55 +151,125 @@ def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago
     logger.info(f"Loaded {logs_filtered} logs from CSV (filtered from {logs_read} total)")
     return logs
 
-# get logs from Graylog API - next milestone
-def get_logs_from_graylog(minutes=60, max_logs=10000):
-    """
-    Get logs from Graylog API.
-    
-    Args:
-        minutes (int): Number of minutes to look back.
-        max_logs (int): Maximum number of logs to retrieve.
-        
-    Returns:
-        list: List of log dictionaries
-    """
+def get_logs_from_graylog(minutes=60, max_logs=50000, batch_size=5000):
     query_url = f"{GRAYLOG_URL}/search/universal/relative"
-    params = {
-        "query": "*",
-        "range": minutes*60,
-        "sort": "timestamp:desc",
-        "fields": "timestamp,message,source,level",
-        "limit": max_logs
-    }
+    collected_logs = []
+    offset = 0
 
-    try:
-        logger.info(f"Fetching logs from Graylog (past {minutes} minutes)")
-        response = requests.get(query_url, headers=headers, params=params)
-        response.raise_for_status()  
-        
-        messages = response.json().get("messages", [])
-        
-        logs = []
-        for m in messages:
-            if "message" in m:
-                msg = m.get("message", {})
-                
-                log_time = parse_timestamp(msg.get("timestamp", ""))
-                
-                logs.append({
-                    "timestamp": msg.get("timestamp", ""),
-                    "datetime": log_time,
-                    "source": msg.get("source", "Unknown"),
-                    "message": msg.get("message", ""),
-                    "level": int(msg.get("level", 6)), 
-                })
-        
-        logger.info(f"Fetched {len(logs)} logs from Graylog")
-        return logs
-    
-    except Exception as e:
-        logger.error(f"Error fetching logs from Graylog: {e}")
-        return []
+    while len(collected_logs) < max_logs:
+        remaining = max_logs - len(collected_logs)
+        current_batch = min(batch_size, remaining)
+
+        params = {
+            "query": "*",
+            "range": minutes * 60,
+            "sort": "timestamp:desc",
+            "fields": "timestamp,message,source,level",
+            "limit": current_batch,
+            "offset": offset
+        }
+
+        try:
+            logger.info(f"Fetching Graylog logs with offset={offset}, batch={current_batch}")
+            response = requests.get(query_url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            messages = data.get("messages", [])
+
+            if not messages:
+                break  # All done
+
+            for m in messages:
+                if "message" in m:
+                    msg = m["message"]
+                    try:
+                        level = int(msg.get("level", 6))
+                    except (ValueError, TypeError):
+                        level = 6
+
+                    collected_logs.append({
+                        "timestamp": msg.get("timestamp", ""),
+                        "source": msg.get("source", "Unknown"),
+                        "message": msg.get("message", ""),
+                        "level": level
+                    })
+
+            if len(messages) < current_batch:
+                break
+
+            offset += current_batch
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"HTTP error fetching logs from Graylog: {e}")
+            break
+        except Exception as e:
+            logger.error(f"Unexpected error fetching logs from Graylog: {e}")
+            break
+
+    logger.info(f"Total logs fetched from Graylog: {len(collected_logs)}")
+    return collected_logs
+
+def get_logs_from_graylog_absolute(from_time, to_time, max_logs=50000, batch_size=5000):
+    query_url = f"{GRAYLOG_URL}/search/universal/absolute"
+    collected_logs = []
+    offset = 0
+
+    from_str = from_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    to_str = to_time.strftime("%Y-%m-%dT%H:%M:%S.000Z")
+
+    while len(collected_logs) < max_logs:
+        remaining = max_logs - len(collected_logs)
+        current_batch = min(batch_size, remaining)
+
+        params = {
+            "query": "*",
+            "from": from_str,
+            "to": to_str,
+            "fields": "timestamp,message,source,level",
+            "limit": current_batch,
+            "offset": offset
+        }
+
+        try:
+            logger.info(f"Fetching Graylog logs from {from_str} to {to_str}, offset={offset}")
+            response = requests.get(query_url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            messages = data.get("messages", [])
+
+            if not messages:
+                logger.info("No more messages returned")
+                break
+
+            for m in messages:
+                if "message" in m:
+                    msg = m["message"]
+                    try:
+                        level = int(msg.get("level", 6))
+                    except (ValueError, TypeError):
+                        level = 6
+
+                    collected_logs.append({
+                        "timestamp": msg.get("timestamp", ""),
+                        "source": msg.get("source", "Unknown"),
+                        "message": msg.get("message", ""),
+                        "level": level
+                    })
+
+            if len(messages) < current_batch:
+                break
+
+            offset += current_batch
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"HTTP error fetching logs from Graylog: {e}")
+            break
+        except Exception as e:
+            logger.error(f"Unexpected error fetching logs from Graylog: {e}")
+            break
+
+    logger.info(f"Total logs fetched from Graylog: {len(collected_logs)}")
+    return collected_logs
 
 # Main function that can use either csv or graylg api
 def get_recent_logs(minutes=None, hours=None, max_logs=5000, use_csv=True, csv_path=None, 
