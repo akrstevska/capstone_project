@@ -45,56 +45,38 @@ def parse_timestamp(timestamp_str):
         datetime: Parsed datetime object with timezone
     """
     formats = [
-        "%Y-%m-%dT%H:%M:%S.%fZ",  # UTC with microseconds
-        "%Y-%m-%dT%H:%M:%SZ",     # UTC without microseconds
-        "%Y-%m-%d %H:%M:%S",      # Local format
-        "%Y-%m-%d %H:%M:%S.%f"    # Local with microseconds
+        "%Y-%m-%dT%H:%M:%S.%fZ",  
+        "%Y-%m-%dT%H:%M:%SZ",     
+        "%Y-%m-%d %H:%M:%S",      
+        "%Y-%m-%d %H:%M:%S.%f"     
     ]
-    
+
     dt = None
-    is_utc = False
-    
     for fmt in formats:
         try:
             dt = datetime.strptime(timestamp_str, fmt)
-            if fmt.endswith("Z"):
-                is_utc = True
             break
         except ValueError:
             continue
-    
+
     if dt is None:
         logger.warning(f"Could not parse timestamp: {timestamp_str}")
         return None
-    
+
+    # timezone if missing
     if dt.tzinfo is None:
-        if is_utc:
-            dt = pytz.UTC.localize(dt)
-        else:
-            dt = DEFAULT_TIMEZONE.localize(dt)
-    
+        dt = DEFAULT_TIMEZONE.localize(dt)
+
     return dt
 
-# read from CSV file 
-def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago=None, start_time=None, end_time=None, source_ip=None):
+def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago=None, 
+                      start_time=None, end_time=None, source_ip=None):
     """
     Read logs from a CSV file with time filtering.
-    
-    Args:
-        file_path (str): Path to the CSV file. Defaults to DEFAULT_CSV_FILE_PATH.
-        max_logs (int): Maximum number of logs to read. If None, read all logs.
-        minutes_ago (int): Filter logs from the last X minutes from reference time.
-        hours_ago (int): Filter logs from the last X hours from reference time.
-        start_time (datetime): Start time for filtering logs.
-        end_time (datetime): End time for filtering logs.
-        
-    Returns:
-        list: List of log dictionaries
     """
     if file_path is None:
         file_path = DEFAULT_CSV_FILE_PATH
     
-    # Determine time filter
     ref_time = get_reference_time()
     
     if minutes_ago is not None:
@@ -107,6 +89,7 @@ def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago
     logs = []
     logs_read = 0
     logs_filtered = 0
+    logs_in_time_range = 0
     
     try:
         with open(file_path, "r", encoding="utf-8") as file:
@@ -118,11 +101,25 @@ def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago
                     log_time = parse_timestamp(row["timestamp"])
                     if log_time is None:
                         continue
+                    
+                    if logs_read <= 5:
+                        print(f"DEBUG: Log {logs_read} - Raw: {row['timestamp']}, Parsed: {log_time}")
+                    
+                    time_match = True
+                    if start_time and log_time < start_time:
+                        time_match = False
+                    if end_time and log_time > end_time:
+                        time_match = False
+                    
+                    if time_match:
+                        logs_in_time_range += 1
+                        
+                    # Apply source filter
                     if source_ip and row.get("source") != source_ip:
                         continue
-                    if start_time and log_time < start_time:
-                        continue
-                    if end_time and log_time > end_time:
+                    
+                    # Apply time filter
+                    if not time_match:
                         continue
                     
                     try:
@@ -140,13 +137,18 @@ def get_logs_from_csv(file_path=None, max_logs=None, minutes_ago=None, hours_ago
                     logs_filtered += 1
                     
                     if max_logs is not None and logs_filtered >= max_logs:
-                        logger.info(f"Reached maximum log limit of {max_logs}")
+                        print(f"DEBUG: Reached maximum log limit of {max_logs}")
                         break
                         
                 except Exception as e:
-                    logger.warning(f"Skipping row due to error: {e}")
+                    print(f"DEBUG: Skipping row due to error: {e}")
+                    continue
     except Exception as e:
         logger.error(f"Error reading CSV file {file_path}: {e}")
+    
+    print(f"DEBUG: Total logs read: {logs_read}")
+    print(f"DEBUG: Logs in time range: {logs_in_time_range}")
+    print(f"DEBUG: Final filtered logs: {logs_filtered}")
     
     logger.info(f"Loaded {logs_filtered} logs from CSV (filtered from {logs_read} total)")
     return logs

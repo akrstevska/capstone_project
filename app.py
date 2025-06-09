@@ -244,168 +244,6 @@ def rule_clusters():
         logger.error(f"Error in rule_clusters endpoint: {e}")
         return jsonify({"error": str(e)}), 500
 
-# @app.route("/ask", methods=["POST"])
-# def ask():
-#     try:
-#         user_q = request.json.get("question")
-#         style = request.json.get("style", "summary")
-#         skip_llm = request.json.get("skip_llm", False)
-
-#         reference_time = request.json.get("reference_time")
-#         if reference_time:
-#             set_reference_time(reference_time)
-        
-#         filters = lp.extract_query_filters(user_q)
-#         if "target_ip" in filters:
-#             filters["source"] = filters.pop("target_ip")
-#         time_filters = {k: v for k, v in filters.items() 
-#                        if k in ['minutes_ago', 'hours_ago', 'today', 'yesterday']}
-#         logger.info(f"Extracted time filters: {time_filters}")
-        
-#         logs = get_recent_logs(
-#             max_logs=20000,
-#             minutes=time_filters.get('minutes_ago'),
-#             hours=time_filters.get('hours_ago'),
-#             source_ip=filters.get("source")
-            
-#         )
-        
-#         if not logs:
-#             return jsonify({"answer": "No logs found for the specified time period."})
-#         if filters:
-#             filtered_logs = []
-#             for log in logs:
-#                 enriched = lp.enrich_log_metadata(log)
-#                 match = True
-#                 for key in ["onu_id", "pon", "device_id"]:
-#                     if key in filters and str(enriched.get(key)) != str(filters[key]):
-#                         match = False
-#                         break
-#                 if match:
-#                     filtered_logs.append(enriched)
-#             logs = filtered_logs
-            
-#         k_logs = 20  
-#         if style == "detailed":
-#             k_logs = 60
-#         elif style == "critical":
-#             k_logs = 80
-#         elif style == "report":
-#             k_logs = 100
-#         logger.info(f"Filtered logs count before diversity selection: {len(logs)}")
-   
-#         if should_filter_logs(user_q):
-#             logs = select_diverse_logs(logs, max_per_type=3, max_total=k_logs)
-
-#         if style == "summary":
-#             system_prompt = short_summary_prompt(user_q)
-#         elif style == "detailed":
-#             system_prompt = detailed_analysis_prompt(user_q)
-#         elif style == "critical":
-#             system_prompt = critical_events_prompt(user_q)
-#         elif style == "report":
-#             system_prompt = report_generator_prompt(user_q)
-#         else:
-#             system_prompt = short_summary_prompt(user_q)
-            
-#         vector_store = lp.create_enhanced_vector_store(logs, embedding_model)
-        
-#         llm = OllamaLLM(model="llama3")
-        
-#         if filters:
-#             filter_function = lp.create_filter_function(filters)
-#             retriever = vector_store.as_retriever(
-#                 search_kwargs={
-#                     "k": k_logs,
-#                     "filter": filter_function
-#                 }
-#             )
-#         else:
-#             retriever = vector_store.as_retriever(search_kwargs={"k": k_logs})
-        
-#         qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-        
-#         answer = None
-#         if not skip_llm:
-#             try:
-#                 response = qa.invoke(system_prompt)
-#                 if isinstance(response, dict) and "result" in response:
-#                     answer = response["result"]
-#                 else:
-#                     answer = qa.run(system_prompt)
-#                     logger.info("Used legacy run() method as fallback")
-#             except Exception as e:
-#                 logger.warning(f"Error with invoke method: {e}")
-#                 answer = qa.run(system_prompt) 
-#                 logger.info("Used legacy run() method as fallback")
-
-#         relevant_logs = []
-#         try:
-           
-#             relevant_docs = vector_store.similarity_search(user_q, k=k_logs)
-            
-#             for doc in relevant_docs:
-#                 try:
-#                     metadata = {}
-#                     content = ""
-                    
-#                     if hasattr(doc, 'metadata') and hasattr(doc, 'page_content'):
-#                         metadata = doc.metadata
-#                         content = doc.page_content
-#                     elif isinstance(doc, dict):
-#                         metadata = doc.get('metadata', {})
-#                         content = doc.get('page_content', str(doc))
-#                     else:
-#                         content = str(doc)
-                    
-#                     source = metadata.get('source', 'Unknown')
-#                     level = metadata.get('level', 'Unknown')
-#                     timestamp = metadata.get('timestamp', 'Unknown')
-#                     device_type = metadata.get('device_type', None)
-#                     device_id = metadata.get('device_id', 'Unknown')
-#                     onu_id = metadata.get('onu_id', None)
-#                     pon = metadata.get('pon', None)
-                    
-#                     metadata_parts = [
-#                         f"Source: {source}",
-#                         f"Level: {level}",
-#                         f"Time: {timestamp}"
-#                     ]
-                    
-#                     if device_type == "OLT" and device_id:
-#                         metadata_parts.append(f"Device: {device_id}")
-#                     elif device_type == "ONU":
-#                         if onu_id and pon:
-#                             metadata_parts.append(f"ONU {onu_id} on PON {pon}")
-#                         elif onu_id:
-#                             metadata_parts.append(f"ONU {onu_id}")
-                    
-#                     metadata_str = " | ".join(metadata_parts)
-#                     formatted_log = f"[{metadata_str}] {content}"
-#                     relevant_logs.append(formatted_log)
-                    
-#                 except Exception as e:
-#                     logger.warning(f"Error formatting individual log: {e}")
-#                     relevant_logs.append(f"[Raw Log] {str(doc)}")
-                    
-#         except Exception as e:
-#             logger.error(f"Error retrieving or processing relevant logs: {e}")
-#             relevant_logs = ["Error retrieving supporting logs"]
-
-#         # result
-#         return jsonify({
-#             "answer": answer if answer else "LLM skipped",
-#             "supporting_logs": relevant_logs,
-#             "metadata": {
-#                 "retrieved_count": len(relevant_logs),
-#                 "applied_filters": filters,
-#                 "total_logs_searched": len(logs),
-#                 "time_filters_applied": time_filters
-#             }
-#         })
-#     except Exception as e:
-#         logger.error(f"Error in ask endpoint: {e}")
-#         return jsonify({"error": str(e)}), 500
 @app.route("/ask", methods=["POST"])
 def ask():
     try:
@@ -463,29 +301,28 @@ def ask():
         if should_filter_logs(user_q):
             logs = select_diverse_logs(logs, max_per_type=3, max_total=k_logs)
 
-        # Create vector store
+        # Create vector store and LLM
         vector_store = lp.create_enhanced_vector_store(logs, embedding_model)
         llm = OllamaLLM(model="llama3")
 
         answer = None
         relevant_logs = []
 
+        # Always retrieve top relevant logs for display
+        relevant_docs = vector_store.similarity_search(user_q, k=k_logs)
+
+        # Format for both display and prompt context
+        context_logs = []
+        for doc in relevant_docs:
+            meta = doc.metadata
+            log_line = f"[{meta.get('timestamp', 'Unknown')}] [{meta.get('source', 'Unknown')}] [Level {meta.get('level', 'Unknown')}] {doc.page_content}"
+            context_logs.append(log_line)
+            relevant_logs.append(log_line)
+
+        logs_context = "\n".join(context_logs)
+
         if not skip_llm:
             try:
-                # Get top relevant docs
-                relevant_docs = vector_store.similarity_search(user_q, k=k_logs)
-
-                # Format retrieved logs for the prompt and output
-                context_logs = []
-                for doc in relevant_docs:
-                    meta = doc.metadata
-                    log_line = f"[{meta.get('timestamp', 'Unknown')}] [{meta.get('source', 'Unknown')}] [Level {meta.get('level', 'Unknown')}] {doc.page_content}"
-                    context_logs.append(log_line)
-                    # also store for output
-                    relevant_logs.append(log_line)
-
-                logs_context = "\n".join(context_logs)
-
                 # Select prompt template
                 if style == "summary":
                     base_prompt = short_summary_prompt(user_q)
@@ -498,7 +335,6 @@ def ask():
                 else:
                     base_prompt = short_summary_prompt(user_q)
 
-                # Construct full prompt
                 full_prompt = f"""{base_prompt}
 
 AVAILABLE LOG ENTRIES:
@@ -513,7 +349,7 @@ Based on the log entries above, provide your analysis:"""
                 logger.error(f"Error during LLM log analysis: {e}")
                 answer = "Error processing logs with LLM"
 
-        # Return final response
+        # Final response including logs even when LLM is skipped
         return jsonify({
             "answer": answer if answer else "LLM skipped",
             "supporting_logs": relevant_logs,
