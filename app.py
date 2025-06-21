@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS 
 
 from graylog_loader import get_recent_logs, set_reference_time, get_reference_time
-from nlplog_utils import load_nlplog_vectorstore
 from prompt_templates import (
     short_summary_prompt,
     detailed_analysis_prompt,
@@ -32,7 +31,6 @@ logger = logging.getLogger('app')
 app = Flask(__name__)
 CORS(app) 
 embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-nlplog_store = load_nlplog_vectorstore(embedding_model)
 vector_store = None
 
 # def normalize_message(message):
@@ -246,6 +244,7 @@ def rule_clusters():
 
 @app.route("/ask", methods=["POST"])
 def ask():
+    print("✅ Received request at /ask")
     try:
         user_q = request.json.get("question")
         style = request.json.get("style", "summary")
